@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir C:\\\\dev\\\\khonho:*)",
+      "Bash(mkdir -p /c/dev/khonho/backend/app/api/v1 /c/dev/khonho/backend/app/models /c/dev/khonho/backend/app/schemas /c/dev/khonho/backend/app/core /c/dev/khonho/backend/alembic)",
+      "Bash(mkdir -p /c/dev/khonho/frontend/src/components/ui /c/dev/khonho/frontend/src/pages /c/dev/khonho/frontend/src/stores /c/dev/khonho/frontend/src/services /c/dev/khonho/frontend/src/utils)"
+    ]
+  }
+}
