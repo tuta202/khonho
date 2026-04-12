@@ -13,8 +13,6 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def upgrade() -> None:
     op.create_table(
@@ -41,7 +39,11 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
 
-    # Seed default owner
+    # Hash bên trong function — tránh chạy lúc import
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    password_bytes = "Admin@123".encode("utf-8")[:72]
+    hashed = pwd_context.hash(password_bytes.decode("utf-8", errors="ignore"))
+
     op.execute(
         sa.text(
             "INSERT INTO users (email, name, password_hash, role, is_active) "
@@ -49,7 +51,7 @@ def upgrade() -> None:
         ).bindparams(
             email="admin@khonho.com",
             name="Administrator",
-            password_hash=_pwd_context.hash("Admin@123"),
+            password_hash=hashed,
             role="owner",
             is_active=True,
         )
