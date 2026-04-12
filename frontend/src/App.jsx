@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import useAuthInit from './hooks/useAuthInit'
 
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -14,6 +15,8 @@ import Reports from './pages/Reports'
 import Users from './pages/Users'
 
 export default function App() {
+  useAuthInit()
+
   return (
     <Routes>
       {/* Public */}
