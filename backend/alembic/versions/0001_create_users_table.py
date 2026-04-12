@@ -39,10 +39,9 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
 
-    # Hash bên trong function — tránh chạy lúc import
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    password_bytes = "Admin@123".encode("utf-8")[:72]
-    hashed = pwd_context.hash(password_bytes.decode("utf-8", errors="ignore"))
+    # Use bcrypt_sha256 to avoid the 72-byte limit and maintain compatibility
+    pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
+    hashed = pwd_context.hash("Admin@123")
 
     op.execute(
         sa.text(
