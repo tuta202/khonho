@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class VariantCreate(BaseModel):
@@ -40,14 +40,28 @@ class SupplierNameResponse(BaseModel):
 
 
 class ProductCreate(BaseModel):
-    name: str
-    sku: Optional[str] = None
-    category: Optional[str] = None
-    cost_price: Optional[Decimal] = Decimal("0")
-    selling_price: Optional[Decimal] = Decimal("0")
-    low_stock_threshold: Optional[int] = 5
+    name: str = Field(..., max_length=200)
+    sku: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=100)
+    cost_price: Optional[Decimal] = Field(Decimal("0"), ge=0)
+    selling_price: Optional[Decimal] = Field(Decimal("0"), ge=0)
+    low_stock_threshold: Optional[int] = Field(5, ge=0)
     supplier_id: Optional[int] = None
     variants: Optional[list[VariantCreate]] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Tên sản phẩm không được để trống")
+        return v.strip()
+
+    @field_validator("sku")
+    @classmethod
+    def sku_format(cls, v):
+        if v is not None and len(v.strip()) == 0:
+            return None
+        return v.strip() if v else v
 
 
 class ProductUpdate(BaseModel):

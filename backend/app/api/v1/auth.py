@@ -29,12 +29,12 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Email hoặc mật khẩu không đúng",
         )
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account is inactive",
+            detail="Tài khoản đã bị vô hiệu hóa",
         )
     return _build_token_response(user)
 

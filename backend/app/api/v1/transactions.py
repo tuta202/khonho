@@ -58,7 +58,7 @@ def _get_warehouse_or_400(warehouse_id: int, db: Session) -> Warehouse:
     if not wh:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Kho id={warehouse_id} không tồn tại hoặc đã bị vô hiệu hoá",
+            detail=f"Kho id={warehouse_id} không tồn tại hoặc đã bị vô hiệu hóa",
         )
     return wh
 
@@ -71,7 +71,7 @@ def _get_variant_or_400(variant_id: int, db: Session) -> Variant:
     if not v:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Biến thể id={variant_id} không tồn tại hoặc đã bị vô hiệu hoá",
+            detail=f"Không tìm thấy sản phẩm/biến thể (id={variant_id})",
         )
     return v
 
@@ -160,7 +160,7 @@ def export_goods(
     if current_qty < body.quantity:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Không đủ hàng tồn kho (hiện có: {current_qty}, yêu cầu: {body.quantity})",
+            detail=f"Không đủ hàng tồn kho. Hiện có: {current_qty}, yêu cầu: {body.quantity}",
         )
 
     try:
@@ -207,7 +207,7 @@ def transfer_goods(
     if current_qty < body.quantity:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Không đủ hàng tồn kho tại kho nguồn (hiện có: {current_qty}, yêu cầu: {body.quantity})",
+            detail=f"Không đủ hàng tồn kho tại kho nguồn. Hiện có: {current_qty}, yêu cầu: {body.quantity}",
         )
 
     try:

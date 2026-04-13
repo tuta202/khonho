@@ -25,7 +25,7 @@ router = APIRouter()
 def _get_warehouse_or_404(warehouse_id: int, db: Session) -> Warehouse:
     wh = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
     if not wh:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kho hàng")
     return wh
 
 
@@ -93,7 +93,7 @@ def delete_warehouse(
     if total_stock > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Không thể xóa kho còn hàng",
+            detail="Không thể xóa kho còn hàng tồn. Vui lòng chuyển hàng sang kho khác trước",
         )
 
     wh.is_active = False

@@ -5,6 +5,8 @@ import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { userService } from '../services/userService'
 import useAuthStore from '../stores/authStore'
+import { parseApiError } from '../utils/errorHandler'
+import { FieldError } from '../components/ui/FieldError'
 
 // ---------------------------------------------------------------------------
 // Role badge
@@ -75,7 +77,11 @@ function UserModal({ user, onClose, currentUserId }) {
       toast.success('Tạo tài khoản thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi tạo tài khoản'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setErrors((prev) => ({ ...prev, ...fe }))
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const updateMut = useMutation({
@@ -85,13 +91,18 @@ function UserModal({ user, onClose, currentUserId }) {
       toast.success('Cập nhật thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi cập nhật'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setErrors((prev) => ({ ...prev, ...fe }))
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
+    setErrors({})
 
     if (isEdit) {
       const payload = { name: form.name, email: form.email }
@@ -123,8 +134,8 @@ function UserModal({ user, onClose, currentUserId }) {
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           <div>
             <label className="label">Họ tên *</label>
-            <input value={form.name} onChange={f('name')} className="input" placeholder="Nguyễn Văn A" />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+            <input value={form.name} onChange={f('name')} className={`input ${errors.name ? 'input-error' : ''}`} placeholder="Nguyễn Văn A" />
+            <FieldError error={errors.name} />
           </div>
           <div>
             <label className="label">Email *</label>
@@ -132,11 +143,11 @@ function UserModal({ user, onClose, currentUserId }) {
               type="email"
               value={form.email}
               onChange={f('email')}
-              className="input"
+              className={`input ${errors.email ? 'input-error' : ''}`}
               placeholder="nv@example.com"
               disabled={isEdit}
             />
-            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+            <FieldError error={errors.email} />
           </div>
           {!isEdit && (
             <div>
@@ -145,10 +156,10 @@ function UserModal({ user, onClose, currentUserId }) {
                 type="password"
                 value={form.password}
                 onChange={f('password')}
-                className="input"
+                className={`input ${errors.password ? 'input-error' : ''}`}
                 placeholder="Ít nhất 8 ký tự"
               />
-              {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+              <FieldError error={errors.password} />
             </div>
           )}
           <div>

@@ -4,6 +4,8 @@ import toast from 'react-hot-toast'
 import { transactionService } from '../services/transactionService'
 import { productService } from '../services/productService'
 import { warehouseService } from '../services/warehouseService'
+import { parseApiError } from '../utils/errorHandler'
+import { FieldError } from '../components/ui/FieldError'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -118,6 +120,7 @@ function ImportForm({ warehouses }) {
   const [warehouseId, setWarehouseId] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [note, setNote] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const mut = useMutation({
     mutationFn: (data) => transactionService.import(data),
@@ -130,12 +133,18 @@ function ImportForm({ warehouses }) {
       setWarehouseId('')
       setQuantity(1)
       setNote('')
+      setFieldErrors({})
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi nhập hàng'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setFieldErrors({})
     if (!variantId) return toast.error('Vui lòng chọn biến thể')
     if (!warehouseId) return toast.error('Vui lòng chọn kho')
     mut.mutate({
@@ -173,8 +182,9 @@ function ImportForm({ warehouses }) {
           required
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          className="input"
+          className={`input ${fieldErrors.quantity ? 'input-error' : ''}`}
         />
+        <FieldError error={fieldErrors.quantity} />
       </div>
 
       <div>
@@ -205,6 +215,7 @@ function ExportForm({ warehouses }) {
   const [exportType, setExportType] = useState('sale')
   const [quantity, setQuantity] = useState(1)
   const [note, setNote] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   // Fetch current stock for selected variant+warehouse
   const { data: invData } = useQuery({
@@ -233,12 +244,18 @@ function ExportForm({ warehouses }) {
       setWarehouseId('')
       setQuantity(1)
       setNote('')
+      setFieldErrors({})
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi xuất hàng'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setFieldErrors({})
     if (!variantId) return toast.error('Vui lòng chọn biến thể')
     if (!warehouseId) return toast.error('Vui lòng chọn kho')
     if (currentStock !== null && parseInt(quantity) > currentStock) {
@@ -299,11 +316,12 @@ function ExportForm({ warehouses }) {
           required
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          className="input"
+          className={`input ${fieldErrors.quantity ? 'input-error' : ''}`}
         />
         {currentStock !== null && parseInt(quantity) > currentStock && (
           <p className="text-xs text-red-600 mt-1">Vượt quá tồn kho</p>
         )}
+        <FieldError error={fieldErrors.quantity} />
       </div>
 
       <div>

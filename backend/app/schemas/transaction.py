@@ -1,47 +1,54 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ImportRequest(BaseModel):
-    variant_id: int
-    to_warehouse_id: int
+    variant_id: int = Field(..., gt=0)
+    to_warehouse_id: int = Field(..., gt=0)
     quantity: int
-    note: Optional[str] = None
+    note: Optional[str] = Field(None, max_length=500)
 
-    @model_validator(mode="after")
-    def check_quantity(self):
-        if self.quantity < 1:
-            raise ValueError("Số lượng phải >= 1")
-        return self
+    @field_validator("quantity")
+    @classmethod
+    def quantity_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Số lượng phải lớn hơn 0")
+        return v
 
 
 class ExportRequest(BaseModel):
-    variant_id: int
-    from_warehouse_id: int
+    variant_id: int = Field(..., gt=0)
+    from_warehouse_id: int = Field(..., gt=0)
     quantity: int
     export_type: Literal["sale", "damage", "adjust"] = "sale"
-    note: Optional[str] = None
+    note: Optional[str] = Field(None, max_length=500)
 
-    @model_validator(mode="after")
-    def check_quantity(self):
-        if self.quantity < 1:
-            raise ValueError("Số lượng phải >= 1")
-        return self
+    @field_validator("quantity")
+    @classmethod
+    def quantity_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Số lượng phải lớn hơn 0")
+        return v
 
 
 class TransferRequest(BaseModel):
-    variant_id: int
-    from_warehouse_id: int
-    to_warehouse_id: int
+    variant_id: int = Field(..., gt=0)
+    from_warehouse_id: int = Field(..., gt=0)
+    to_warehouse_id: int = Field(..., gt=0)
     quantity: int
-    note: Optional[str] = None
+    note: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("quantity")
+    @classmethod
+    def quantity_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Số lượng phải lớn hơn 0")
+        return v
 
     @model_validator(mode="after")
-    def check_quantity(self):
-        if self.quantity < 1:
-            raise ValueError("Số lượng phải >= 1")
+    def check_warehouses_differ(self):
         if self.from_warehouse_id == self.to_warehouse_id:
             raise ValueError("Kho nguồn và kho đích không được trùng nhau")
         return self

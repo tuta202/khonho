@@ -4,6 +4,8 @@ import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { productService } from '../services/productService'
 import useAuthStore from '../stores/authStore'
+import { parseApiError } from '../utils/errorHandler'
+import { FieldError } from '../components/ui/FieldError'
 
 // ---------------------------------------------------------------------------
 // Modal — Add / Edit product
@@ -23,6 +25,8 @@ function ProductModal({ product, onClose, isOwner }) {
   })
 
   // variant rows for new product
+  const [fieldErrors, setFieldErrors] = useState({})
+
   const [variantRows, setVariantRows] = useState(
     product?.variants?.length
       ? product.variants.map((v) => ({
@@ -42,7 +46,11 @@ function ProductModal({ product, onClose, isOwner }) {
       toast.success('Thêm sản phẩm thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi thêm sản phẩm'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const updateMut = useMutation({
@@ -52,11 +60,16 @@ function ProductModal({ product, onClose, isOwner }) {
       toast.success('Cập nhật thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi cập nhật'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setFieldErrors({})
     const payload = {
       name: form.name,
       sku: form.sku || null,
@@ -122,18 +135,20 @@ function ProductModal({ product, onClose, isOwner }) {
                       required
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="input"
+                      className={`input ${fieldErrors.name ? 'input-error' : ''}`}
                       placeholder="VD: Áo thun nam"
                     />
+                    <FieldError error={fieldErrors.name} />
                   </div>
                   <div>
                     <label className="label">SKU</label>
                     <input
                       value={form.sku}
                       onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                      className="input"
+                      className={`input ${fieldErrors.sku ? 'input-error' : ''}`}
                       placeholder="VD: ATN-001"
                     />
+                    <FieldError error={fieldErrors.sku} />
                   </div>
                   <div>
                     <label className="label">Danh mục</label>

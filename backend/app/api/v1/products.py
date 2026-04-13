@@ -79,7 +79,7 @@ def _get_product_or_404(product_id: int, db: Session) -> Product:
         selectinload(Product.supplier),
     ).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy sản phẩm")
     return product
 
 
@@ -151,6 +151,14 @@ def create_product(
     data = body.model_dump(exclude={"variants"})
     if current_user.role != "owner":
         data.pop("cost_price", None)
+
+    if data.get("sku"):
+        existing = db.query(Product).filter(Product.sku == data["sku"], Product.is_active == True).first()  # noqa: E712
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Mã SKU đã tồn tại, vui lòng dùng mã khác",
+            )
 
     product = Product(**data)
     db.add(product)
@@ -287,7 +295,7 @@ def update_variant(
         Variant.product_id == product_id,
     ).first()
     if not variant:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy biến thể")
 
     data = body.model_dump(exclude_none=True)
     if current_user.role != "owner":
@@ -323,6 +331,6 @@ def delete_variant(
         Variant.product_id == product_id,
     ).first()
     if not variant:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy biến thể")
     variant.is_active = False
     db.commit()

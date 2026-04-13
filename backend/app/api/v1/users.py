@@ -58,7 +58,7 @@ def create_user(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email đã được sử dụng",
+            detail="Email này đã được sử dụng",
         )
     user = User(
         email=body.email,
@@ -82,7 +82,7 @@ def update_user(
 ):
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài khoản")
 
     # Owner cannot demote themselves
     if body.role == "staff" and user_id == current_user.id:
@@ -108,13 +108,13 @@ def toggle_user(
 ):
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài khoản")
 
     # Owner cannot deactivate themselves
     if user_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Không thể tắt tài khoản của chính mình",
+            detail="Không thể vô hiệu hóa tài khoản của chính mình",
         )
 
     # Guard: ensure at least one active owner remains
@@ -126,7 +126,7 @@ def toggle_user(
         if active_owners <= 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Phải có ít nhất 1 owner active",
+                detail="Phải có ít nhất 1 tài khoản owner đang hoạt động",
             )
 
     target.is_active = not target.is_active

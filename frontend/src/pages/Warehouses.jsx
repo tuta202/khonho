@@ -4,6 +4,8 @@ import { Plus, Warehouse as WarehouseIcon, ArrowLeft, AlertTriangle } from 'luci
 import toast from 'react-hot-toast'
 import { warehouseService } from '../services/warehouseService'
 import useAuthStore from '../stores/authStore'
+import { parseApiError } from '../utils/errorHandler'
+import { FieldError } from '../components/ui/FieldError'
 
 // ---------------------------------------------------------------------------
 // Warehouse modal — add / edit
@@ -16,6 +18,7 @@ function WarehouseModal({ warehouse, onClose }) {
     name: warehouse?.name ?? '',
     location: warehouse?.location ?? '',
   })
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const createMut = useMutation({
     mutationFn: (data) => warehouseService.create(data),
@@ -24,7 +27,11 @@ function WarehouseModal({ warehouse, onClose }) {
       toast.success('Thêm kho thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi thêm kho'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const updateMut = useMutation({
@@ -34,11 +41,16 @@ function WarehouseModal({ warehouse, onClose }) {
       toast.success('Cập nhật kho thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi cập nhật'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setFieldErrors({})
     const payload = {
       name: form.name,
       location: form.location || null,
@@ -62,9 +74,10 @@ function WarehouseModal({ warehouse, onClose }) {
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="input"
+              className={`input ${fieldErrors.name ? 'input-error' : ''}`}
               placeholder="VD: Kho phụ"
             />
+            <FieldError error={fieldErrors.name} />
           </div>
           <div>
             <label className="label">Địa chỉ / Vị trí</label>

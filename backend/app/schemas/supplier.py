@@ -1,15 +1,38 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class SupplierCreate(BaseModel):
-    name: str
-    phone: Optional[str] = None
+    name: str = Field(..., max_length=200)
+    phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = None
     address: Optional[str] = None
     note: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Tên nhà cung cấp không được để trống")
+        return v.strip()
+
+    @field_validator("phone")
+    @classmethod
+    def phone_format(cls, v):
+        if v:
+            digits = "".join(filter(str.isdigit, v))
+            if len(digits) < 9 or len(digits) > 11:
+                raise ValueError("Số điện thoại không hợp lệ (9-11 chữ số)")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def email_format(cls, v):
+        if v and "@" not in v:
+            raise ValueError("Email không đúng định dạng")
+        return v
 
 
 class SupplierUpdate(BaseModel):

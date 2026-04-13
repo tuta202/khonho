@@ -1,12 +1,19 @@
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class WarehouseCreate(BaseModel):
-    name: str
-    location: Optional[str] = None
+    name: str = Field(..., max_length=100)
+    location: Optional[str] = Field(None, max_length=200)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Tên kho không được để trống")
+        return v.strip()
 
 
 class WarehouseUpdate(BaseModel):

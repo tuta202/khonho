@@ -25,7 +25,7 @@ router = APIRouter()
 def _get_supplier_or_404(supplier_id: int, db: Session) -> Supplier:
     s = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not s:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy nhà cung cấp")
     return s
 
 
@@ -77,6 +77,12 @@ def create_supplier(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
+    existing = db.query(Supplier).filter(Supplier.name == body.name, Supplier.is_active == True).first()  # noqa: E712
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nhà cung cấp với tên này đã tồn tại",
+        )
     supplier = Supplier(**body.model_dump())
     db.add(supplier)
     db.commit()

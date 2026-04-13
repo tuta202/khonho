@@ -4,6 +4,8 @@ import { Plus, Pencil, Trash2, ArrowLeft, History } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supplierService } from '../services/supplierService'
 import useAuthStore from '../stores/authStore'
+import { parseApiError } from '../utils/errorHandler'
+import { FieldError } from '../components/ui/FieldError'
 
 // ---------------------------------------------------------------------------
 // Supplier modal — add / edit
@@ -19,6 +21,7 @@ function SupplierModal({ supplier, onClose }) {
     address: supplier?.address ?? '',
     note: supplier?.note ?? '',
   })
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const f = (field) => (e) => setForm({ ...form, [field]: e.target.value })
 
@@ -29,7 +32,11 @@ function SupplierModal({ supplier, onClose }) {
       toast.success('Thêm nhà cung cấp thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi thêm NCC'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const updateMut = useMutation({
@@ -39,11 +46,16 @@ function SupplierModal({ supplier, onClose }) {
       toast.success('Cập nhật thành công')
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi cập nhật'),
+    onError: (err) => {
+      const { fieldErrors: fe, generalError } = parseApiError(err)
+      setFieldErrors(fe)
+      if (generalError) toast.error(generalError)
+    },
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setFieldErrors({})
     const payload = {
       name: form.name,
       phone: form.phone || null,
@@ -68,16 +80,19 @@ function SupplierModal({ supplier, onClose }) {
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           <div>
             <label className="label">Tên nhà cung cấp *</label>
-            <input required value={form.name} onChange={f('name')} className="input" placeholder="VD: Công ty ABC" />
+            <input required value={form.name} onChange={f('name')} className={`input ${fieldErrors.name ? 'input-error' : ''}`} placeholder="VD: Công ty ABC" />
+            <FieldError error={fieldErrors.name} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Điện thoại</label>
-              <input value={form.phone} onChange={f('phone')} className="input" placeholder="0901234567" />
+              <input value={form.phone} onChange={f('phone')} className={`input ${fieldErrors.phone ? 'input-error' : ''}`} placeholder="0901234567" />
+              <FieldError error={fieldErrors.phone} />
             </div>
             <div>
               <label className="label">Email</label>
-              <input type="email" value={form.email} onChange={f('email')} className="input" placeholder="contact@abc.vn" />
+              <input type="email" value={form.email} onChange={f('email')} className={`input ${fieldErrors.email ? 'input-error' : ''}`} placeholder="contact@abc.vn" />
+              <FieldError error={fieldErrors.email} />
             </div>
           </div>
           <div>
