@@ -63,8 +63,7 @@ class WarehouseSimple(BaseModel):
 
 class VariantSimple(BaseModel):
     id: int
-    color: Optional[str]
-    size: Optional[str]
+    display_name: str
     sku_variant: Optional[str]
     product_name: Optional[str] = None
 

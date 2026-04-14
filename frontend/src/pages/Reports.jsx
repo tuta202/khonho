@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle } from 'lucide-react'
-import { reportService } from '../services/reportService'
+import { AlertTriangle, FileSpreadsheet, FileText } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { reportService, exportReport } from '../services/reportService'
 import { warehouseService } from '../services/warehouseService'
 import useAuthStore from '../stores/authStore'
 
@@ -22,6 +23,25 @@ function SummaryCard({ label, value, sub, color = 'text-gray-800' }) {
   )
 }
 
+function ExportButtons({ onExport }) {
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={() => onExport('xlsx')}
+        className="btn-secondary flex items-center gap-1 text-sm"
+      >
+        <FileSpreadsheet size={16} /> Excel
+      </button>
+      <button
+        onClick={() => onExport('csv')}
+        className="btn-secondary flex items-center gap-1 text-sm"
+      >
+        <FileText size={16} /> CSV
+      </button>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Tab 1 — Inventory snapshot
 // ---------------------------------------------------------------------------
@@ -38,6 +58,20 @@ function InventoryTab({ warehouses }) {
 
   const items = data?.items ?? []
 
+  const handleExport = async (format) => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      await exportReport(
+        '/api/v1/reports/inventory-snapshot/export',
+        { format, warehouse_id: warehouseId || undefined },
+        `ton-kho-${today}.${format}`,
+      )
+      toast.success('Xuất file thành công')
+    } catch {
+      toast.error('Không thể xuất file')
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* summary chips */}
@@ -52,8 +86,8 @@ function InventoryTab({ warehouses }) {
         </div>
       )}
 
-      {/* filters */}
-      <div className="flex gap-3">
+      {/* filters + export */}
+      <div className="flex items-center gap-3 flex-wrap">
         <select
           value={warehouseId}
           onChange={(e) => setWarehouseId(e.target.value)}
@@ -64,6 +98,7 @@ function InventoryTab({ warehouses }) {
             <option key={wh.id} value={wh.id}>{wh.name}</option>
           ))}
         </select>
+        <ExportButtons onExport={handleExport} />
       </div>
 
       <div className="bg-white rounded-lg border overflow-hidden">
@@ -73,8 +108,7 @@ function InventoryTab({ warehouses }) {
               <th className="px-4 py-3">Sản phẩm</th>
               <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">Danh mục</th>
-              <th className="px-4 py-3">Màu</th>
-              <th className="px-4 py-3">Size</th>
+              <th className="px-4 py-3">Biến thể</th>
               <th className="px-4 py-3">Kho</th>
               <th className="px-4 py-3">Số lượng</th>
               <th className="px-4 py-3">Trạng thái</th>
@@ -82,18 +116,17 @@ function InventoryTab({ warehouses }) {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-400">Đang tải...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">Đang tải...</td></tr>
             )}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">Không có dữ liệu</td></tr>
             )}
             {items.map((item, i) => (
               <tr key={i} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{item.product_name}</td>
                 <td className="px-4 py-3 text-gray-400">{item.sku ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-500">{item.category ?? '—'}</td>
-                <td className="px-4 py-3">{item.color ?? '—'}</td>
-                <td className="px-4 py-3">{item.size ?? '—'}</td>
+                <td className="px-4 py-3">{item.display_name}</td>
                 <td className="px-4 py-3 text-gray-500">{item.warehouse_name}</td>
                 <td className="px-4 py-3 font-semibold">{item.quantity}</td>
                 <td className="px-4 py-3">
@@ -152,6 +185,19 @@ function TransactionsSummaryTab({ warehouses }) {
     enabled: submitted,
   })
 
+  const handleExport = async (format) => {
+    try {
+      await exportReport(
+        '/api/v1/reports/transactions-summary/export',
+        { format, date_from: dateFrom, date_to: dateTo, warehouse_id: warehouseId || undefined },
+        `giao-dich-${dateFrom}-${dateTo}.${format}`,
+      )
+      toast.success('Xuất file thành công')
+    } catch {
+      toast.error('Không thể xuất file')
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* filters */}
@@ -193,6 +239,7 @@ function TransactionsSummaryTab({ warehouses }) {
         >
           Xem báo cáo
         </button>
+        <ExportButtons onExport={handleExport} />
       </div>
 
       {isLoading && <p className="text-gray-400 text-sm">Đang tải...</p>}
@@ -265,10 +312,24 @@ function InventoryValueTab() {
     queryFn: () => reportService.inventoryValue().then((r) => r.data),
   })
 
+  const handleExport = async (format) => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      await exportReport(
+        '/api/v1/reports/inventory-value/export',
+        { format },
+        `gia-tri-ton-kho-${today}.${format}`,
+      )
+      toast.success('Xuất file thành công')
+    } catch {
+      toast.error('Không thể xuất file')
+    }
+  }
+
   return (
     <div className="space-y-4">
       {data && (
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <SummaryCard
             label="Tổng giá trị tồn kho"
             value={fmtCurrency(data.grand_total_value)}
@@ -278,6 +339,9 @@ function InventoryValueTab() {
             label="Tổng số lượng"
             value={data.grand_total_quantity}
           />
+          <div className="ml-auto">
+            <ExportButtons onExport={handleExport} />
+          </div>
         </div>
       )}
 

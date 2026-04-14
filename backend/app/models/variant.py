@@ -15,8 +15,6 @@ class Variant(Base):
     product_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("products.id"), nullable=False
     )
-    color: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    size: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     sku_variant: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
     cost_price_override: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(12, 2), nullable=True
@@ -31,4 +29,7 @@ class Variant(Base):
     product: Mapped["Product"] = relationship("Product", back_populates="variants")
     inventory_items: Mapped[list["Inventory"]] = relationship(
         "Inventory", back_populates="variant"
+    )
+    attributes: Mapped[list["VariantAttribute"]] = relationship(
+        "VariantAttribute", back_populates="variant", cascade="all, delete-orphan"
     )

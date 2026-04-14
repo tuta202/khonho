@@ -35,8 +35,7 @@ class InventoryItemResponse(BaseModel):
     product_id: int
     product_name: str
     variant_id: int
-    color: Optional[str]
-    size: Optional[str]
+    display_name: str
     quantity: int
     cost_price: Decimal
     low_stock_threshold: int
@@ -56,8 +55,7 @@ class SummaryItemResponse(BaseModel):
     sku: Optional[str]
     category: Optional[str]
     variant_id: int
-    color: Optional[str]
-    size: Optional[str]
+    display_name: str
     sku_variant: Optional[str]
     total_quantity: int
     selling_price: Decimal

@@ -28,6 +28,12 @@ _EXPORT_TYPE_MAP = {
 }
 
 
+def _fmt_display_name(attrs) -> str:
+    if not attrs:
+        return "Mặc định"
+    return " / ".join(a.attr_value for a in attrs)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -77,9 +83,9 @@ def _get_variant_or_400(variant_id: int, db: Session) -> Variant:
 
 
 def _build_response(tx: Transaction, db: Session) -> TransactionResponse:
-    # Re-load with relationships if not already loaded
     tx = db.query(Transaction).options(
         selectinload(Transaction.variant).selectinload(Variant.product),
+        selectinload(Transaction.variant).selectinload(Variant.attributes),
         selectinload(Transaction.from_warehouse),
         selectinload(Transaction.to_warehouse),
         selectinload(Transaction.user),
@@ -87,8 +93,7 @@ def _build_response(tx: Transaction, db: Session) -> TransactionResponse:
 
     variant_data = VariantSimple(
         id=tx.variant.id,
-        color=tx.variant.color,
-        size=tx.variant.size,
+        display_name=_fmt_display_name(tx.variant.attributes),
         sku_variant=tx.variant.sku_variant,
         product_name=tx.variant.product.name if tx.variant.product else None,
     )
@@ -253,6 +258,7 @@ def list_transactions(
 ):
     query = db.query(Transaction).options(
         selectinload(Transaction.variant).selectinload(Variant.product),
+        selectinload(Transaction.variant).selectinload(Variant.attributes),
         selectinload(Transaction.from_warehouse),
         selectinload(Transaction.to_warehouse),
         selectinload(Transaction.user),
@@ -280,8 +286,7 @@ def list_transactions(
     for tx in txs:
         variant_data = VariantSimple(
             id=tx.variant.id,
-            color=tx.variant.color,
-            size=tx.variant.size,
+            display_name=_fmt_display_name(tx.variant.attributes),
             sku_variant=tx.variant.sku_variant,
             product_name=tx.variant.product.name if tx.variant.product else None,
         )

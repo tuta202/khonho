@@ -4,30 +4,33 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class VariantAttributeInput(BaseModel):
+    attr_name: str = Field(..., min_length=1, max_length=100)
+    attr_value: str = Field(..., min_length=1, max_length=200)
+
+
 class VariantCreate(BaseModel):
-    color: Optional[str] = None
-    size: Optional[str] = None
     sku_variant: Optional[str] = None
     cost_price_override: Optional[Decimal] = None
+    attributes: list[VariantAttributeInput] = []
 
 
 class VariantUpdate(BaseModel):
-    color: Optional[str] = None
-    size: Optional[str] = None
     sku_variant: Optional[str] = None
     cost_price_override: Optional[Decimal] = None
     is_active: Optional[bool] = None
+    attributes: Optional[list[VariantAttributeInput]] = None
 
 
 class VariantResponse(BaseModel):
     id: int
     product_id: int
-    color: Optional[str]
-    size: Optional[str]
     sku_variant: Optional[str]
     cost_price_override: Optional[Decimal]
     is_active: bool
     total_quantity: int = 0
+    attributes: list[VariantAttributeInput]
+    display_name: str
 
     model_config = {"from_attributes": True}
 

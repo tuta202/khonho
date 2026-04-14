@@ -184,7 +184,7 @@ function HistoryPanel({ supplier, onBack }) {
               <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">Chưa có lịch sử nhập hàng</td></tr>
             )}
             {items.map((item) => {
-              const variantLabel = [item.variant_color, item.variant_size].filter(Boolean).join(' / ') || 'Mặc định'
+              const variantLabel = item.variant_display_name
               return (
                 <tr key={item.transaction_id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtDate(item.created_at)}</td>

@@ -13,8 +13,7 @@ class InventorySnapshotItem(BaseModel):
     sku: Optional[str]
     category: Optional[str]
     variant_id: int
-    color: Optional[str]
-    size: Optional[str]
+    display_name: str
     sku_variant: Optional[str]
     warehouse_id: int
     warehouse_name: str

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_current_user, get_db, require_owner
 from app.models.product import Product
@@ -150,6 +150,7 @@ def supplier_history(
         .join(Variant, Transaction.variant_id == Variant.id)
         .join(Product, Variant.product_id == Product.id)
         .outerjoin(Warehouse, Transaction.to_warehouse_id == Warehouse.id)
+        .options(selectinload(Variant.attributes))
         .filter(
             Product.supplier_id == supplier_id,
             Transaction.type == "import",
@@ -170,8 +171,7 @@ def supplier_history(
             transaction_id=tx.id,
             created_at=tx.created_at,
             product_name=product.name,
-            variant_color=variant.color,
-            variant_size=variant.size,
+            variant_display_name=(" / ".join(a.attr_value for a in variant.attributes) if variant.attributes else "Mặc định"),
             sku_variant=variant.sku_variant,
             quantity=tx.quantity,
             warehouse_name=warehouse.name if warehouse else None,
