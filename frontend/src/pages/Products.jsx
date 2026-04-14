@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { productService } from '../services/productService'
+import { supplierService } from '../services/supplierService'
 import useAuthStore from '../stores/authStore'
 import { parseApiError } from '../utils/errorHandler'
 import { FieldError } from '../components/ui/FieldError'
@@ -13,6 +14,12 @@ import { FieldError } from '../components/ui/FieldError'
 function ProductModal({ product, onClose, isOwner }) {
   const qc = useQueryClient()
   const isEdit = !!product
+
+  const { data: suppliersData } = useQuery({
+    queryKey: ['suppliers', 'all'],
+    queryFn: () => supplierService.list({ page: 1, per_page: 100 }).then((r) => r.data?.items ?? []),
+  })
+  const suppliers = suppliersData ?? []
 
   const [form, setForm] = useState({
     name: product?.name ?? '',
@@ -195,15 +202,17 @@ function ProductModal({ product, onClose, isOwner }) {
                     />
                   </div>
                   <div>
-                    <label className="label">Nhà cung cấp ID</label>
-                    <input
-                      type="number"
-                      min="1"
+                    <label className="label">Nhà cung cấp</label>
+                    <select
                       value={form.supplier_id}
                       onChange={(e) => setForm({ ...form, supplier_id: e.target.value })}
                       className="input"
-                      placeholder="ID nhà CC (tuỳ chọn)"
-                    />
+                    >
+                      <option value="">-- Không có --</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </>
@@ -316,9 +325,147 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
 }
 
 // ---------------------------------------------------------------------------
+// Variant add / edit modal
+// ---------------------------------------------------------------------------
+function VariantModal({ productId, variant, isOwner, onClose }) {
+  const qc = useQueryClient()
+  const isEdit = !!variant
+
+  const [form, setForm] = useState({
+    sku_variant: variant?.sku_variant ?? '',
+    cost_price_override: variant?.cost_price_override ?? '',
+  })
+  const [attributes, setAttributes] = useState(
+    variant?.attributes?.length
+      ? variant.attributes.map((a) => ({ attr_name: a.attr_name, attr_value: a.attr_value }))
+      : [{ attr_name: '', attr_value: '' }]
+  )
+
+  const saveMut = useMutation({
+    mutationFn: (data) =>
+      isEdit
+        ? productService.updateVariant(productId, variant.id, data)
+        : productService.createVariant(productId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['variants', productId] })
+      toast.success(isEdit ? 'Cập nhật biến thể thành công' : 'Thêm biến thể thành công')
+      onClose()
+    },
+    onError: (err) => toast.error(err.response?.data?.detail ?? 'Lỗi khi lưu biến thể'),
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    saveMut.mutate({
+      sku_variant: form.sku_variant || null,
+      cost_price_override:
+        form.cost_price_override !== '' ? parseFloat(form.cost_price_override) : null,
+      attributes: attributes.filter((a) => a.attr_name && a.attr_value),
+    })
+  }
+
+  const addAttr = () => setAttributes((prev) => [...prev, { attr_name: '', attr_value: '' }])
+  const removeAttr = (i) => setAttributes((prev) => prev.filter((_, idx) => idx !== i))
+  const updateAttr = (i, field, val) =>
+    setAttributes((prev) => prev.map((a, idx) => (idx === i ? { ...a, [field]: val } : a)))
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold">{isEdit ? 'Sửa biến thể' : 'Thêm biến thể'}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div>
+            <label className="label">SKU biến thể</label>
+            <input
+              value={form.sku_variant}
+              onChange={(e) => setForm({ ...form, sku_variant: e.target.value })}
+              className="input"
+              placeholder="VD: ATN-001-DO-M"
+            />
+          </div>
+          {isOwner && (
+            <div>
+              <label className="label">Giá vốn riêng</label>
+              <input
+                type="number"
+                min="0"
+                step="1000"
+                value={form.cost_price_override}
+                onChange={(e) => setForm({ ...form, cost_price_override: e.target.value })}
+                className="input"
+                placeholder="Để trống = dùng giá vốn sản phẩm"
+              />
+            </div>
+          )}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="label mb-0">Thuộc tính</label>
+              <button type="button" onClick={addAttr} className="btn-sm">+ Thêm</button>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b">
+                  <th className="pb-1 pr-2">Tên thuộc tính</th>
+                  <th className="pb-1 pr-2">Giá trị</th>
+                  <th className="pb-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {attributes.map((a, i) => (
+                  <tr key={i}>
+                    <td className="py-1 pr-2">
+                      <input
+                        value={a.attr_name}
+                        onChange={(e) => updateAttr(i, 'attr_name', e.target.value)}
+                        className="input-sm"
+                        placeholder="Màu sắc"
+                      />
+                    </td>
+                    <td className="py-1 pr-2">
+                      <input
+                        value={a.attr_value}
+                        onChange={(e) => updateAttr(i, 'attr_value', e.target.value)}
+                        className="input-sm"
+                        placeholder="Đỏ"
+                      />
+                    </td>
+                    <td className="py-1">
+                      {attributes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAttr(i)}
+                          className="text-red-400 hover:text-red-600"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary">Huỷ</button>
+            <button type="submit" disabled={saveMut.isPending} className="btn-primary">
+              {saveMut.isPending ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Thêm biến thể'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Expanded variants row
 // ---------------------------------------------------------------------------
 function VariantRow({ product, isOwner }) {
+  const [variantModal, setVariantModal] = useState(null) // null | 'add' | variant object
+
   const { data, isLoading } = useQuery({
     queryKey: ['variants', product.id],
     queryFn: () => productService.listVariants(product.id).then((r) => r.data),
@@ -327,43 +474,66 @@ function VariantRow({ product, isOwner }) {
   if (isLoading) return <tr><td colSpan={9} className="px-4 py-2 text-sm text-gray-400">Đang tải biến thể...</td></tr>
 
   return (
-    <tr>
-      <td colSpan={9} className="bg-gray-50 px-8 py-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Biến thể</p>
-        {data?.length === 0 ? (
-          <p className="text-sm text-gray-400">Không có biến thể</p>
-        ) : (
-          <table className="text-sm w-full">
-            <thead>
-              <tr className="text-gray-500 text-left">
-                <th className="pr-4 pb-1">SKU</th>
-                <th className="pr-4 pb-1">Màu</th>
-                <th className="pr-4 pb-1">Size</th>
-                <th className="pr-4 pb-1">Tồn kho</th>
-                {isOwner && <th className="pb-1">Giá vốn riêng</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {data?.map((v) => (
-                <tr key={v.id} className="border-t">
-                  <td className="pr-4 py-1">{v.sku_variant ?? '—'}</td>
-                  <td className="pr-4 py-1">{v.color ?? '—'}</td>
-                  <td className="pr-4 py-1">{v.size ?? '—'}</td>
-                  <td className="pr-4 py-1">{v.total_quantity}</td>
-                  {isOwner && (
-                    <td className="py-1">
-                      {v.cost_price_override != null
-                        ? Number(v.cost_price_override).toLocaleString('vi-VN')
-                        : '—'}
-                    </td>
-                  )}
+    <>
+      <tr>
+        <td colSpan={9} className="bg-gray-50 px-8 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase">Biến thể</p>
+            <button type="button" onClick={() => setVariantModal('add')} className="btn-sm">
+              + Thêm biến thể
+            </button>
+          </div>
+          {data?.length === 0 ? (
+            <p className="text-sm text-gray-400">Không có biến thể</p>
+          ) : (
+            <table className="text-sm w-full">
+              <thead>
+                <tr className="text-gray-500 text-left">
+                  <th className="pr-4 pb-1">SKU</th>
+                  <th className="pr-4 pb-1">Tên biến thể</th>
+                  <th className="pr-4 pb-1">Tồn kho</th>
+                  {isOwner && <th className="pr-4 pb-1">Giá vốn riêng</th>}
+                  <th className="pb-1"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </td>
-    </tr>
+              </thead>
+              <tbody>
+                {data?.map((v) => (
+                  <tr key={v.id} className="border-t">
+                    <td className="pr-4 py-1">{v.sku_variant ?? '—'}</td>
+                    <td className="pr-4 py-1">{v.display_name ?? '—'}</td>
+                    <td className="pr-4 py-1">{v.total_quantity}</td>
+                    {isOwner && (
+                      <td className="pr-4 py-1">
+                        {v.cost_price_override != null
+                          ? Number(v.cost_price_override).toLocaleString('vi-VN')
+                          : '—'}
+                      </td>
+                    )}
+                    <td className="py-1">
+                      <button
+                        onClick={() => setVariantModal(v)}
+                        className="text-gray-400 hover:text-blue-600"
+                        title="Sửa"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </td>
+      </tr>
+      {variantModal && (
+        <VariantModal
+          productId={product.id}
+          variant={variantModal === 'add' ? null : variantModal}
+          isOwner={isOwner}
+          onClose={() => setVariantModal(null)}
+        />
+      )}
+    </>
   )
 }
 
