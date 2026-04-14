@@ -31,18 +31,18 @@ function ProductModal({ product, onClose, isOwner }) {
     supplier_id: product?.supplier?.id ?? '',
   })
 
-  // variant rows for new product
   const [fieldErrors, setFieldErrors] = useState({})
 
   const [variantRows, setVariantRows] = useState(
     product?.variants?.length
       ? product.variants.map((v) => ({
           id: v.id,
-          color: v.color ?? '',
-          size: v.size ?? '',
           sku_variant: v.sku_variant ?? '',
+          attributes: v.attributes?.length
+            ? v.attributes.map((a) => ({ attr_name: a.attr_name, attr_value: a.attr_value }))
+            : [{ attr_name: '', attr_value: '' }],
         }))
-      : [{ color: '', size: '', sku_variant: '' }]
+      : [{ sku_variant: '', attributes: [{ attr_name: '', attr_value: '' }] }]
   )
   const [tab, setTab] = useState('info')
 
@@ -90,18 +90,62 @@ function ProductModal({ product, onClose, isOwner }) {
     }
     if (!isEdit) {
       payload.variants = variantRows
-        .filter((r) => r.color || r.size || r.sku_variant)
-        .map((r) => ({ color: r.color || null, size: r.size || null, sku_variant: r.sku_variant || null }))
+        .filter((r) => r.sku_variant || r.attributes.some((a) => a.attr_name && a.attr_value))
+        .map((r) => ({
+          sku_variant: r.sku_variant || null,
+          attributes: r.attributes.filter((a) => a.attr_name && a.attr_value),
+        }))
     }
     isEdit ? updateMut.mutate(payload) : createMut.mutate(payload)
   }
 
+  // Variant row helpers
   const addVariantRow = () =>
-    setVariantRows((prev) => [...prev, { color: '', size: '', sku_variant: '' }])
+    setVariantRows((prev) => [
+      ...prev,
+      { sku_variant: '', attributes: [{ attr_name: '', attr_value: '' }] },
+    ])
+
   const removeVariantRow = (i) =>
     setVariantRows((prev) => prev.filter((_, idx) => idx !== i))
+
   const updateVariantRow = (i, field, val) =>
-    setVariantRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)))
+    setVariantRows((prev) =>
+      prev.map((r, idx) => (idx === i ? { ...r, [field]: val } : r))
+    )
+
+  // Attribute helpers (per variant row)
+  const addAttr = (variantIdx) =>
+    setVariantRows((prev) =>
+      prev.map((r, i) =>
+        i === variantIdx
+          ? { ...r, attributes: [...r.attributes, { attr_name: '', attr_value: '' }] }
+          : r
+      )
+    )
+
+  const removeAttr = (variantIdx, attrIdx) =>
+    setVariantRows((prev) =>
+      prev.map((r, i) =>
+        i === variantIdx
+          ? { ...r, attributes: r.attributes.filter((_, ai) => ai !== attrIdx) }
+          : r
+      )
+    )
+
+  const updateAttr = (variantIdx, attrIdx, field, value) =>
+    setVariantRows((prev) =>
+      prev.map((r, i) =>
+        i === variantIdx
+          ? {
+              ...r,
+              attributes: r.attributes.map((a, ai) =>
+                ai === attrIdx ? { ...a, [field]: value } : a
+              ),
+            }
+          : r
+      )
+    )
 
   const busy = createMut.isPending || updateMut.isPending
 
@@ -237,57 +281,68 @@ function ProductModal({ product, onClose, isOwner }) {
                     Để sửa biến thể, dùng tính năng quản lý biến thể trong trang chi tiết sản phẩm.
                   </p>
                 ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-gray-500 border-b">
-                        <th className="pb-2 pr-2">Màu</th>
-                        <th className="pb-2 pr-2">Size</th>
-                        <th className="pb-2 pr-2">SKU biến thể</th>
-                        <th className="pb-2"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {variantRows.map((row, i) => (
-                        <tr key={i} className="border-b last:border-0">
-                          <td className="py-1 pr-2">
-                            <input
-                              value={row.color}
-                              onChange={(e) => updateVariantRow(i, 'color', e.target.value)}
-                              className="input-sm"
-                              placeholder="Đỏ"
-                            />
-                          </td>
-                          <td className="py-1 pr-2">
-                            <input
-                              value={row.size}
-                              onChange={(e) => updateVariantRow(i, 'size', e.target.value)}
-                              className="input-sm"
-                              placeholder="M"
-                            />
-                          </td>
-                          <td className="py-1 pr-2">
-                            <input
-                              value={row.sku_variant}
-                              onChange={(e) => updateVariantRow(i, 'sku_variant', e.target.value)}
-                              className="input-sm"
-                              placeholder="ATN-001-DO-M"
-                            />
-                          </td>
-                          <td className="py-1">
-                            {variantRows.length > 1 && (
+                  <div className="space-y-3">
+                    {variantRows.map((row, i) => (
+                      <div key={i} className="border rounded-lg p-3 space-y-2 bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-500 uppercase">
+                            Biến thể {i + 1}
+                          </span>
+                          {variantRows.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeVariantRow(i)}
+                              className="text-xs text-red-500 hover:text-red-700"
+                            >
+                              Xóa biến thể
+                            </button>
+                          )}
+                        </div>
+
+                        <input
+                          value={row.sku_variant}
+                          onChange={(e) => updateVariantRow(i, 'sku_variant', e.target.value)}
+                          className="input text-sm"
+                          placeholder="SKU biến thể (tuỳ chọn)"
+                        />
+
+                        <div className="space-y-2">
+                          {row.attributes.map((attr, ai) => (
+                            <div key={ai} className="flex gap-2 items-center">
+                              <input
+                                className="input flex-1"
+                                placeholder="Tên thuộc tính (VD: Màu sắc, Size, Dung tích)"
+                                value={attr.attr_name}
+                                onChange={(e) => updateAttr(i, ai, 'attr_name', e.target.value)}
+                              />
+                              <input
+                                className="input flex-1"
+                                placeholder="Giá trị (VD: Đỏ, XL, 500ml)"
+                                value={attr.attr_value}
+                                onChange={(e) => updateAttr(i, ai, 'attr_value', e.target.value)}
+                              />
                               <button
                                 type="button"
-                                onClick={() => removeVariantRow(i)}
-                                className="text-red-400 hover:text-red-600"
+                                onClick={() => removeAttr(i, ai)}
+                                className="btn-danger px-2"
+                                disabled={row.attributes.length === 1}
                               >
-                                &times;
+                                ×
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => addAttr(i)}
+                          className="btn-secondary text-sm"
+                        >
+                          + Thêm thuộc tính
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -553,7 +608,7 @@ export default function Products() {
   const [category, setCategory] = useState('')
   const [page, setPage] = useState(1)
   const [expandedId, setExpandedId] = useState(null)
-  const [modal, setModal] = useState(null) // null | 'add' | product object
+  const [modal, setModal] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   const { data, isLoading } = useQuery({

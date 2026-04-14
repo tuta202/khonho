@@ -22,6 +22,12 @@ from app.schemas.transaction import TransactionResponse, VariantSimple
 router = APIRouter()
 
 
+def _fmt_display_name(attrs) -> str:
+    if not attrs:
+        return "Mặc định"
+    return " / ".join(a.attr_value for a in attrs)
+
+
 @router.get("/stats", response_model=DashboardStats)
 def get_stats(
     db: Session = Depends(get_db),
@@ -39,7 +45,6 @@ def get_stats(
         Warehouse.is_active == True  # noqa: E712
     ).scalar()
 
-    # low_stock_count: inventory records where quantity <= product.low_stock_threshold
     low_stock_count = (
         db.query(func.count(Inventory.id))
         .join(Variant, Inventory.variant_id == Variant.id)
@@ -52,17 +57,13 @@ def get_stats(
         .scalar()
     )
 
-    # transactions today (UTC)
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     transactions_today = db.query(func.count(Transaction.id)).filter(
         Transaction.created_at >= today_start
     ).scalar()
 
-    # total_inventory_value — only for owner, skip for staff (performance)
     total_inventory_value = None
     if current_user.role == "owner":
-        # SUM(qty * effective_cost_price) per inventory row
-        # effective cost = COALESCE(variant.cost_price_override, product.cost_price)
         effective_cost = func.coalesce(Variant.cost_price_override, Product.cost_price)
         result = (
             db.query(func.sum(Inventory.quantity * effective_cost))
@@ -96,6 +97,7 @@ def get_alerts(
         .join(Variant, Inventory.variant_id == Variant.id)
         .join(Product, Variant.product_id == Product.id)
         .join(Warehouse, Inventory.warehouse_id == Warehouse.id)
+        .options(selectinload(Variant.attributes))
         .filter(
             Variant.is_active == True,    # noqa: E712
             Product.is_active == True,    # noqa: E712
@@ -108,8 +110,7 @@ def get_alerts(
 
     alerts = []
     for inv, variant, product, warehouse in rows:
-        parts = [p for p in [variant.color, variant.size] if p]
-        variant_label = " - ".join(parts) if parts else "Mặc định"
+        variant_label = _fmt_display_name(variant.attributes)
         alerts.append(
             LowStockAlert(
                 product_name=product.name,
@@ -132,6 +133,7 @@ def get_recent(
         db.query(Transaction)
         .options(
             selectinload(Transaction.variant).selectinload(Variant.product),
+            selectinload(Transaction.variant).selectinload(Variant.attributes),
             selectinload(Transaction.from_warehouse),
             selectinload(Transaction.to_warehouse),
             selectinload(Transaction.user),
@@ -145,8 +147,7 @@ def get_recent(
     for tx in txs:
         variant_data = VariantSimple(
             id=tx.variant.id,
-            color=tx.variant.color,
-            size=tx.variant.size,
+            display_name=_fmt_display_name(tx.variant.attributes),
             sku_variant=tx.variant.sku_variant,
             product_name=tx.variant.product.name if tx.variant.product else None,
         )

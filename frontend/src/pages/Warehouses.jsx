@@ -158,8 +158,7 @@ function InventoryPanel({ warehouse, onBack, isOwner }) {
           <thead className="bg-gray-50 text-gray-500 text-left">
             <tr>
               <th className="px-4 py-3">Sản phẩm</th>
-              <th className="px-4 py-3">Màu</th>
-              <th className="px-4 py-3">Size</th>
+              <th className="px-4 py-3">Biến thể</th>
               <th className="px-4 py-3">Số lượng</th>
               {isOwner && <th className="px-4 py-3">Giá vốn</th>}
               <th className="px-4 py-3">Trạng thái</th>
@@ -168,14 +167,14 @@ function InventoryPanel({ warehouse, onBack, isOwner }) {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={isOwner ? 6 : 5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={isOwner ? 5 : 4} className="px-4 py-6 text-center text-gray-400">
                   Đang tải...
                 </td>
               </tr>
             )}
             {!isLoading && data?.items?.length === 0 && (
               <tr>
-                <td colSpan={isOwner ? 6 : 5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={isOwner ? 5 : 4} className="px-4 py-6 text-center text-gray-400">
                   Kho trống
                 </td>
               </tr>
@@ -183,8 +182,7 @@ function InventoryPanel({ warehouse, onBack, isOwner }) {
             {data?.items?.map((item) => (
               <tr key={item.variant_id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{item.product_name}</td>
-                <td className="px-4 py-3 text-gray-500">{item.color ?? '—'}</td>
-                <td className="px-4 py-3 text-gray-500">{item.size ?? '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{item.display_name}</td>
                 <td className="px-4 py-3 font-semibold">{item.quantity}</td>
                 {isOwner && (
                   <td className="px-4 py-3">

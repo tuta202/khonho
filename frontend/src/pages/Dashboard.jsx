@@ -140,7 +140,7 @@ function RecentPanel() {
           <p className="px-5 py-4 text-sm text-gray-400">Chưa có giao dịch nào</p>
         )}
         {txs.map((tx) => {
-          const variantLabel = [tx.variant.color, tx.variant.size].filter(Boolean).join(' / ') || 'Mặc định'
+          const variantLabel = tx.variant.display_name
           const whLabel = tx.type === 'transfer'
             ? `${tx.from_warehouse?.name ?? '?'} → ${tx.to_warehouse?.name ?? '?'}`
             : tx.from_warehouse?.name ?? tx.to_warehouse?.name ?? '—'

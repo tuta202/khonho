@@ -22,6 +22,12 @@ from app.schemas.warehouse import (
 router = APIRouter()
 
 
+def _fmt_display_name(attrs) -> str:
+    if not attrs:
+        return "Mặc định"
+    return " / ".join(a.attr_value for a in attrs)
+
+
 def _get_warehouse_or_404(warehouse_id: int, db: Session) -> Warehouse:
     wh = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
     if not wh:
@@ -118,6 +124,7 @@ def warehouse_inventory(
         db.query(Inventory, Variant, Product)
         .join(Variant, Inventory.variant_id == Variant.id)
         .join(Product, Variant.product_id == Product.id)
+        .options(selectinload(Variant.attributes))
         .filter(
             Inventory.warehouse_id == warehouse_id,
             Variant.is_active == True,   # noqa: E712
@@ -142,8 +149,7 @@ def warehouse_inventory(
                 product_id=product.id,
                 product_name=product.name,
                 variant_id=variant.id,
-                color=variant.color,
-                size=variant.size,
+                display_name=_fmt_display_name(variant.attributes),
                 quantity=inv.quantity,
                 cost_price=cost,
                 low_stock_threshold=product.low_stock_threshold,
@@ -170,7 +176,6 @@ def inventory_summary(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    # SUM quantity per variant across all active warehouses
     qty_subq = (
         select(
             Inventory.variant_id,
@@ -186,6 +191,7 @@ def inventory_summary(
         db.query(Variant, Product, qty_subq.c.total_qty)
         .join(Product, Variant.product_id == Product.id)
         .outerjoin(qty_subq, Variant.id == qty_subq.c.variant_id)
+        .options(selectinload(Variant.attributes))
         .filter(
             Variant.is_active == True,   # noqa: E712
             Product.is_active == True,   # noqa: E712
@@ -205,8 +211,7 @@ def inventory_summary(
                 sku=product.sku,
                 category=product.category,
                 variant_id=variant.id,
-                color=variant.color,
-                size=variant.size,
+                display_name=_fmt_display_name(variant.attributes),
                 sku_variant=variant.sku_variant,
                 total_quantity=qty,
                 selling_price=product.selling_price,

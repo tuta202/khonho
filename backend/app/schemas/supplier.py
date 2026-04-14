@@ -61,8 +61,7 @@ class SupplierHistoryItem(BaseModel):
     transaction_id: int
     created_at: datetime
     product_name: str
-    variant_color: Optional[str]
-    variant_size: Optional[str]
+    variant_display_name: str
     sku_variant: Optional[str]
     quantity: int
     warehouse_name: Optional[str]

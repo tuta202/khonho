@@ -9,6 +9,7 @@ from app.dependencies import get_current_user, get_db, require_owner
 from app.models.inventory import Inventory
 from app.models.product import Product
 from app.models.variant import Variant
+from app.models.variant_attribute import VariantAttribute
 from app.models.warehouse import Warehouse
 from app.schemas.product import (
     PaginationMeta,
@@ -16,6 +17,7 @@ from app.schemas.product import (
     ProductListResponse,
     ProductResponse,
     ProductUpdate,
+    VariantAttributeInput,
     VariantCreate,
     VariantResponse,
     VariantUpdate,
@@ -30,6 +32,12 @@ _DEFAULT_WAREHOUSE_ID = 1  # "Kho chính" seeded in migration 0002
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _get_variant_display_name(attributes: list) -> str:
+    if not attributes:
+        return "Mặc định"
+    return " / ".join(a.attr_value for a in attributes)
+
+
 def _total_quantity_for_variant(db: Session, variant_id: int) -> int:
     result = db.execute(
         select(func.coalesce(func.sum(Inventory.quantity), 0)).where(
@@ -39,22 +47,29 @@ def _total_quantity_for_variant(db: Session, variant_id: int) -> int:
     return int(result)
 
 
+def _build_variant_response(v: Variant, db: Session) -> VariantResponse:
+    return VariantResponse(
+        id=v.id,
+        product_id=v.product_id,
+        sku_variant=v.sku_variant,
+        cost_price_override=v.cost_price_override,
+        is_active=v.is_active,
+        total_quantity=_total_quantity_for_variant(db, v.id),
+        attributes=[
+            VariantAttributeInput(attr_name=a.attr_name, attr_value=a.attr_value)
+            for a in v.attributes
+        ],
+        display_name=_get_variant_display_name(v.attributes),
+    )
+
+
 def _build_product_response(product: Product, db: Session, include_variants: bool = False) -> ProductResponse:
     variants = [v for v in product.variants if v.is_active]
     total_qty = sum(_total_quantity_for_variant(db, v.id) for v in variants)
     variant_responses = None
     if include_variants:
         variant_responses = [
-            VariantResponse(
-                id=v.id,
-                product_id=v.product_id,
-                color=v.color,
-                size=v.size,
-                sku_variant=v.sku_variant,
-                cost_price_override=v.cost_price_override,
-                is_active=v.is_active,
-                total_quantity=_total_quantity_for_variant(db, v.id),
-            )
+            _build_variant_response(v, db)
             for v in product.variants
         ]
     return ProductResponse(
@@ -76,6 +91,7 @@ def _build_product_response(product: Product, db: Session, include_variants: boo
 def _get_product_or_404(product_id: int, db: Session) -> Product:
     product = db.query(Product).options(
         selectinload(Product.variants).selectinload(Variant.inventory_items),
+        selectinload(Product.variants).selectinload(Variant.attributes),
         selectinload(Product.supplier),
     ).filter(Product.id == product_id).first()
     if not product:
@@ -90,7 +106,6 @@ def _ensure_inventory_for_variant(db: Session, variant_id: int) -> None:
         Inventory.warehouse_id == _DEFAULT_WAREHOUSE_ID,
     ).first()
     if not exists:
-        # Verify default warehouse exists before creating
         wh = db.query(Warehouse).filter(Warehouse.id == _DEFAULT_WAREHOUSE_ID).first()
         if wh:
             db.add(Inventory(variant_id=variant_id, warehouse_id=_DEFAULT_WAREHOUSE_ID, quantity=0))
@@ -162,20 +177,25 @@ def create_product(
 
     product = Product(**data)
     db.add(product)
-    db.flush()  # get product.id before creating variants
+    db.flush()
 
-    variants_to_create = body.variants or [VariantCreate()]  # at least one default variant
+    variants_to_create = body.variants or [VariantCreate()]
     for vc in variants_to_create:
-        v_data = vc.model_dump()
+        v_data = vc.model_dump(exclude={"attributes"})
         if current_user.role != "owner":
             v_data.pop("cost_price_override", None)
         variant = Variant(product_id=product.id, **v_data)
         db.add(variant)
         db.flush()
+        for attr in vc.attributes:
+            db.add(VariantAttribute(
+                variant_id=variant.id,
+                attr_name=attr.attr_name,
+                attr_value=attr.attr_value,
+            ))
         _ensure_inventory_for_variant(db, variant.id)
 
     db.commit()
-    db.refresh(product)
     product = _get_product_or_404(product.id, db)
     return _build_product_response(product, db, include_variants=True)
 
@@ -232,23 +252,13 @@ def list_variants(
     _: dict = Depends(get_current_user),
 ):
     _get_product_or_404(product_id, db)
-    variants = db.query(Variant).filter(
+    variants = db.query(Variant).options(
+        selectinload(Variant.attributes)
+    ).filter(
         Variant.product_id == product_id,
         Variant.is_active == True,  # noqa: E712
     ).all()
-    return [
-        VariantResponse(
-            id=v.id,
-            product_id=v.product_id,
-            color=v.color,
-            size=v.size,
-            sku_variant=v.sku_variant,
-            cost_price_override=v.cost_price_override,
-            is_active=v.is_active,
-            total_quantity=_total_quantity_for_variant(db, v.id),
-        )
-        for v in variants
-    ]
+    return [_build_variant_response(v, db) for v in variants]
 
 
 @router.post("/{product_id}/variants", response_model=VariantResponse, status_code=status.HTTP_201_CREATED)
@@ -259,27 +269,26 @@ def create_variant(
     current_user=Depends(get_current_user),
 ):
     _get_product_or_404(product_id, db)
-    data = body.model_dump()
+    v_data = body.model_dump(exclude={"attributes"})
     if current_user.role != "owner":
-        data.pop("cost_price_override", None)
+        v_data.pop("cost_price_override", None)
 
-    variant = Variant(product_id=product_id, **data)
+    variant = Variant(product_id=product_id, **v_data)
     db.add(variant)
     db.flush()
+    for attr in body.attributes:
+        db.add(VariantAttribute(
+            variant_id=variant.id,
+            attr_name=attr.attr_name,
+            attr_value=attr.attr_value,
+        ))
     _ensure_inventory_for_variant(db, variant.id)
     db.commit()
-    db.refresh(variant)
 
-    return VariantResponse(
-        id=variant.id,
-        product_id=variant.product_id,
-        color=variant.color,
-        size=variant.size,
-        sku_variant=variant.sku_variant,
-        cost_price_override=variant.cost_price_override,
-        is_active=variant.is_active,
-        total_quantity=_total_quantity_for_variant(db, variant.id),
-    )
+    variant = db.query(Variant).options(
+        selectinload(Variant.attributes)
+    ).filter(Variant.id == variant.id).first()
+    return _build_variant_response(variant, db)
 
 
 @router.put("/{product_id}/variants/{variant_id}", response_model=VariantResponse)
@@ -297,26 +306,31 @@ def update_variant(
     if not variant:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy biến thể")
 
-    data = body.model_dump(exclude_none=True)
+    data = body.model_dump(exclude_none=True, exclude={"attributes"})
     if current_user.role != "owner":
         data.pop("cost_price_override", None)
 
     for field, value in data.items():
         setattr(variant, field, value)
 
-    db.commit()
-    db.refresh(variant)
+    # Replace strategy for attributes
+    if body.attributes is not None:
+        db.query(VariantAttribute).filter(
+            VariantAttribute.variant_id == variant_id
+        ).delete()
+        for attr in body.attributes:
+            db.add(VariantAttribute(
+                variant_id=variant_id,
+                attr_name=attr.attr_name,
+                attr_value=attr.attr_value,
+            ))
 
-    return VariantResponse(
-        id=variant.id,
-        product_id=variant.product_id,
-        color=variant.color,
-        size=variant.size,
-        sku_variant=variant.sku_variant,
-        cost_price_override=variant.cost_price_override,
-        is_active=variant.is_active,
-        total_quantity=_total_quantity_for_variant(db, variant.id),
-    )
+    db.commit()
+
+    variant = db.query(Variant).options(
+        selectinload(Variant.attributes)
+    ).filter(Variant.id == variant_id).first()
+    return _build_variant_response(variant, db)
 
 
 @router.delete("/{product_id}/variants/{variant_id}", status_code=status.HTTP_204_NO_CONTENT)

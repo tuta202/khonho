@@ -100,7 +100,7 @@ function ProductVariantSelect({ onVariantSelect, selectedVariantId }) {
             <option value="">-- Chọn biến thể --</option>
             {(variants ?? []).map((v) => (
               <option key={v.id} value={v.id}>
-                {[v.color, v.size].filter(Boolean).join(' / ') || 'Mặc định'}
+                {v.display_name}
                 {v.sku_variant ? ` (${v.sku_variant})` : ''}
               </option>
             ))}
@@ -435,7 +435,7 @@ function HistoryTab({ warehouses }) {
               <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">Không có giao dịch</td></tr>
             )}
             {items.map((tx) => {
-              const variantLabel = [tx.variant.color, tx.variant.size].filter(Boolean).join(' / ') || 'Mặc định'
+              const variantLabel = tx.variant.display_name
               const warehouseLabel = tx.type === 'transfer'
                 ? `${tx.from_warehouse?.name ?? '?'} → ${tx.to_warehouse?.name ?? '?'}`
                 : tx.from_warehouse?.name ?? tx.to_warehouse?.name ?? '—'
