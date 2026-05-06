@@ -4,7 +4,15 @@
       "Bash(dir C:\\\\dev\\\\khonho:*)",
       "Bash(mkdir -p /c/dev/khonho/backend/app/api/v1 /c/dev/khonho/backend/app/models /c/dev/khonho/backend/app/schemas /c/dev/khonho/backend/app/core /c/dev/khonho/backend/alembic)",
       "Bash(mkdir -p /c/dev/khonho/frontend/src/components/ui /c/dev/khonho/frontend/src/pages /c/dev/khonho/frontend/src/stores /c/dev/khonho/frontend/src/services /c/dev/khonho/frontend/src/utils)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(dir \"C:\\\\development\\\\khonho\")",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npx create-expo-app@latest *)",
+      "Bash(npm install *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('exports', {}\\).keys\\(\\) if 'exports' in d else list\\(d.get\\('main',''\\)\\)\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(xargs grep -l \"className\")"
     ]
   }
 }
