@@ -13,7 +13,11 @@
       "resizeMode": "contain",
       "backgroundColor": "#1e3a5f"
     },
-    "plugins": ["expo-router", "expo-secure-store", "expo-font"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font"
+    ],
     "ios": {
       "supportsTablet": true
     },
@@ -29,6 +33,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6f24e761-e7e3-4411-90a7-7545c04e334e"
+      }
     }
   }
 }
