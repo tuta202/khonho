@@ -10,6 +10,7 @@ import {
   Dimensions,
   StyleSheet,
   ScrollView,
+  Keyboard,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../constants/colors'
@@ -51,8 +52,12 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
-        {/* Backdrop tap to close */}
-        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        {/* Backdrop tap to close + dismiss keyboard */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={() => { Keyboard.dismiss(); onClose() }}
+          activeOpacity={1}
+        />
 
         <Animated.View style={{ transform: [{ translateY: slideY }] }}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

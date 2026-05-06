@@ -2,6 +2,7 @@ import { Redirect, Tabs } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import useAuthStore from '../../stores/authStore'
 import { Colors } from '../../constants/colors'
+import { ErrorBoundary } from '../../components/ui/ErrorBoundary'
 
 export default function AppLayout() {
   const { accessToken } = useAuthStore()
@@ -11,6 +12,7 @@ export default function AppLayout() {
   }
 
   return (
+    <ErrorBoundary>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -60,5 +62,6 @@ export default function AppLayout() {
         }}
       />
     </Tabs>
+    </ErrorBoundary>
   )
 }

@@ -137,7 +137,10 @@ function AlertCard({ item }: { item: AlertItem }) {
           {item.variant} · {item.warehouse_name}
         </Text>
       </View>
-      <View style={{ backgroundColor: '#fee2e2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
+      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+        <View style={{ backgroundColor: '#fee2e2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#dc2626' }}>Sắp hết</Text>
+        </View>
         <Text style={{ fontSize: 12, fontWeight: '700', color: '#dc2626' }}>
           {item.quantity} / {item.threshold}
         </Text>

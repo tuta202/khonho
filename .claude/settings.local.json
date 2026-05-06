@@ -14,7 +14,10 @@
       "Bash(npx tsc *)",
       "Bash(xargs grep -l \"className\")",
       "Bash(grep -v \"^--$\")",
-      "PowerShell(cmd /c \"dir /b /s C:\\\\development\\\\khonho\\\\mobile\\\\app\\\\\\(app\\)\\\\more\" 2>&1)"
+      "PowerShell(cmd /c \"dir /b /s C:\\\\development\\\\khonho\\\\mobile\\\\app\\\\\\(app\\)\\\\more\" 2>&1)",
+      "PowerShell(cmd /c \"dir /b C:\\\\development\\\\khonho\\\\mobile\\\\assets\" 2>&1)",
+      "PowerShell(cmd /c \"dir /b C:\\\\development\\\\khonho\\\\mobile\" 2>&1)",
+      "PowerShell(cmd /c \"dir /b /s C:\\\\development\\\\khonho\\\\mobile\\\\app\\\\\\(app\\)\" 2>&1)"
     ]
   }
 }
