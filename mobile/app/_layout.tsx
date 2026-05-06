@@ -1,6 +1,6 @@
 import '../global.css'
-import { useEffect } from 'react'
-import { Stack, router } from 'expo-router'
+import { ActivityIndicator, View, Text } from 'react-native'
+import { Stack } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { config } from '@gluestack-ui/config'
@@ -8,8 +8,8 @@ import Toast from 'react-native-toast-message'
 import { StatusBar } from 'expo-status-bar'
 
 import useAuthStore from '../stores/authStore'
-import api from '../services/api'
-import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import { useAuthInit } from '../hooks/useAuthInit'
+import { Colors } from '../constants/colors'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,44 +17,38 @@ const queryClient = new QueryClient({
   },
 })
 
-function AuthInit() {
-  const { accessToken, hydrated, setUser, setHydrated, logout } = useAuthStore()
-
-  useEffect(() => {
-    if (!accessToken) {
-      setHydrated(true)
-      return
-    }
-
-    api.get('/auth/me')
-      .then((res) => {
-        setUser(res.data)
-        setHydrated(true)
-      })
-      .catch(() => {
-        logout()
-      })
-  }, [])
-
-  return null
+function SplashScreen() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.navy.DEFAULT }}>
+      <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold', marginBottom: 8 }}>KhoNhỏ</Text>
+      <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 32 }}>Quản lý kho hàng</Text>
+      <ActivityIndicator color="#fff" size="large" />
+    </View>
+  )
 }
 
-export default function RootLayout() {
-  const { hydrated, accessToken } = useAuthStore()
+function AppNavigator() {
+  useAuthInit()
+  const { hydrated } = useAuthStore()
 
   if (!hydrated) {
-    return <LoadingSpinner />
+    return <SplashScreen />
   }
 
   return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(app)" />
+    </Stack>
+  )
+}
+
+export default function RootLayout() {
+  return (
     <QueryClientProvider client={queryClient}>
       <GluestackUIProvider config={config}>
-        <AuthInit />
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(app)" />
-        </Stack>
+        <AppNavigator />
         <Toast />
       </GluestackUIProvider>
     </QueryClientProvider>

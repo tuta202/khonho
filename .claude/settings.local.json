@@ -12,7 +12,9 @@
       "Bash(npm install *)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('exports', {}\\).keys\\(\\) if 'exports' in d else list\\(d.get\\('main',''\\)\\)\\)\")",
       "Bash(npx tsc *)",
-      "Bash(xargs grep -l \"className\")"
+      "Bash(xargs grep -l \"className\")",
+      "Bash(grep -v \"^--$\")",
+      "PowerShell(cmd /c \"dir /b /s C:\\\\development\\\\khonho\\\\mobile\\\\app\\\\\\(app\\)\\\\more\" 2>&1)"
     ]
   }
 }
