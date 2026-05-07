@@ -26,6 +26,7 @@ interface AuthState {
   login: (tokenResponse: TokenResponse) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User) => void
+  setAccessToken: (token: string) => void
   setHydrated: (val: boolean) => void
 }
 
@@ -52,6 +53,7 @@ const useAuthStore = create<AuthState>((set) => ({
   },
 
   setUser: (user: User) => set({ user }),
+  setAccessToken: (token: string) => set({ accessToken: token }),
   setHydrated: (val: boolean) => set({ hydrated: val }),
 }))
 

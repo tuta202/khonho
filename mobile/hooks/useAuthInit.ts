@@ -4,7 +4,7 @@ import useAuthStore from '../stores/authStore'
 import api from '../services/api'
 
 export function useAuthInit() {
-  const { setUser, setHydrated, logout } = useAuthStore()
+  const { setUser, setAccessToken, setHydrated, logout } = useAuthStore()
 
   useEffect(() => {
     async function init() {
@@ -16,6 +16,7 @@ export function useAuthInit() {
 
       try {
         const res = await api.get('/auth/me')
+        setAccessToken(token)
         setUser(res.data)
       } catch {
         await logout()
